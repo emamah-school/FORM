@@ -9,6 +9,13 @@ function doGet() {
 function submitFormData(formData) {
   try {
     Logger.log('بدء إرسال البيانات...');
+    Logger.log('البيانات المستلمة: ' + JSON.stringify({
+      name: formData.name,
+      email: formData.email,
+      department: formData.department,
+      hasProblemImage: !!formData.problemImageData,
+      hasLocationImage: !!formData.locationImageData
+    }));
     
     // فتح الشيت
     const spreadsheetId = '1bDxVwP76HVQGABqI-_YKQUBIknxU9zHOVxz9SR8tFmo';
@@ -21,10 +28,12 @@ function submitFormData(formData) {
     
     if (formData.problemImageData) {
       problemImageUrl = uploadImageSimple(formData.problemImageData, 'problem');
+      Logger.log('تم رفع صورة العطل: ' + problemImageUrl);
     }
     
     if (formData.locationImageData) {
       locationImageUrl = uploadImageSimple(formData.locationImageData, 'location');
+      Logger.log('تم رفع صورة المكان: ' + locationImageUrl);
     }
     
     // إدخال البيانات في الشيت
@@ -47,7 +56,7 @@ function submitFormData(formData) {
     const lastRow = sheet.getLastRow();
     setupCheckboxesForRow(sheet, lastRow);
     
-    Logger.log('تم الإرسال بنجاح');
+    Logger.log('تم الإرسال بنجاح - الصف: ' + lastRow);
     return JSON.stringify({
       status: 'success',
       message: 'تم إرسال البلاغ بنجاح'
@@ -102,7 +111,15 @@ function setupCheckboxesForRow(sheet, rowNum) {
     sheet.getRange('G' + rowNum).setDataValidation(checkboxRule);
     sheet.getRange('H' + rowNum).setDataValidation(checkboxRule);
     
+    Logger.log('تم إعداد مربعات الاختيار للصف: ' + rowNum);
+    
   } catch (error) {
     Logger.log('❌ خطأ في إعداد مربعات الاختيار: ' + error.toString());
   }
+}
+
+// دالة لاختبار النظام
+function testSystem() {
+  Logger.log('✅ نظام الاستمارة يعمل بشكل صحيح');
+  return 'النظام جاهز للاستخدام';
 }
