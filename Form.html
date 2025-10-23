@@ -383,12 +383,13 @@
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             
+            // جمع البيانات الأساسية
             const formData = {
                 name: document.getElementById('name').value.trim(),
                 email: document.getElementById('email').value.trim(),
                 department: document.getElementById('department').value.trim(),
-                problemImage: problemImageFile,
-                locationImage: locationImageFile
+                problemImageData: null,
+                locationImageData: null
             };
 
             // التحقق من البيانات
@@ -401,30 +402,63 @@
             submitBtn.disabled = true;
             loading.style.display = 'block';
 
-            // إرسال البيانات إلى Google Apps Script
-            google.script.run
-                .withSuccessHandler(function(response) {
-                    loading.style.display = 'none';
-                    submitBtn.disabled = false;
-                    
-                    const result = JSON.parse(response);
-                    if (result.status === 'success') {
-                        showAlert('✅ تم إرسال البلاغ بنجاح!', 'success');
-                        form.reset();
-                        problemPreview.innerHTML = '';
-                        locationPreview.innerHTML = '';
-                        problemImageFile = null;
-                        locationImageFile = null;
-                    } else {
-                        showAlert('❌ ' + result.error, 'error');
-                    }
-                })
-                .withFailureHandler(function(error) {
-                    loading.style.display = 'none';
-                    submitBtn.disabled = false;
-                    showAlert('❌ حدث خطأ في الإرسال: ' + error.message, 'error');
-                })
-                .submitFormData(formData);
+            // تحضير الصور بشكل متوازي
+            const promises = [];
+            
+            if (problemImageFile) {
+                promises.push(new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        formData.problemImageData = e.target.result;
+                        resolve();
+                    };
+                    reader.readAsDataURL(problemImageFile);
+                }));
+            }
+            
+            if (locationImageFile) {
+                promises.push(new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        formData.locationImageData = e.target.result;
+                        resolve();
+                    };
+                    reader.readAsDataURL(locationImageFile);
+                }));
+            }
+
+            // انتظار تحضير جميع الصور ثم الإرسال
+            Promise.all(promises).then(() => {
+                // إرسال البيانات إلى Google Apps Script
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        loading.style.display = 'none';
+                        submitBtn.disabled = false;
+                        
+                        const result = JSON.parse(response);
+                        if (result.status === 'success') {
+                            showAlert('✅ تم إرسال البلاغ بنجاح!', 'success');
+                            // إعادة تعيين النموذج
+                            form.reset();
+                            problemPreview.innerHTML = '';
+                            locationPreview.innerHTML = '';
+                            problemImageFile = null;
+                            locationImageFile = null;
+                        } else {
+                            showAlert('❌ ' + result.error, 'error');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        loading.style.display = 'none';
+                        submitBtn.disabled = false;
+                        showAlert('❌ حدث خطأ في الإرسال: ' + error.message, 'error');
+                    })
+                    .submitFormData(formData);
+            }).catch((error) => {
+                loading.style.display = 'none';
+                submitBtn.disabled = false;
+                showAlert('❌ خطأ في معالجة الصور: ' + error.message, 'error');
+            });
         });
 
         // تأثيرات عند التحميل
